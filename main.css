@@ -1,44 +1,35 @@
 body {
   font-family: "tablet-gothic", sans-serif;
   text-rendering: optimizeLegibility;
-  color: #4A4A4A;
+  color: #4a4a4a;
 }
-
 section {
   width: 100%;
   height: 100%;
 }
-
 section svg {
   width: 100%;
   height: 100%;
 }
-
 circle {
   fill: #f4f4f4;
   fill-opacity: 1;
-  stroke: #DDDBDB;
+  stroke: #dddbdb;
   stroke-width: 1px;
 }
+/*text
+  font-size 10px
+  color #868686
+  text-anchor middle
 
-/*text {
-  font-size: 10px;
-  color: #868686;
-  text-anchor: middle;
-}
+tspan
+  alignment-baseline middle
 
-tspan {
-  alignment-baseline: middle;
-}
+tspan.strong
+  font-weight bold
 
-tspan.strong {
-  font-weight: bold;
-}
-
-text.circle-label {
-  font-size: 12px;
-}*/
-
+text.circle-label
+  font-size 12px*/
 div.description {
   font-size: 12px;
   position: absolute;
@@ -46,13 +37,11 @@ div.description {
   text-align: center;
   width: 100%;
 }
-
 p.description {
   width: 250px;
   display: inline-block;
   line-height: 1.2em;
 }
-
 .label {
   position: absolute;
   top: 0;
@@ -60,7 +49,6 @@ p.description {
   display: table;
   font-size: 10px;
 }
-
 .label p {
   display: table-cell;
   text-align: center;
@@ -68,11 +56,12 @@ p.description {
   margin: 0;
   line-height: 1.1em;
 }
-
 .pack.label {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+.node {
   opacity: 0;
 }
 
-.stage1 .pack.label {
-  opacity: 1;
-}

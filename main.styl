@@ -1,0 +1,74 @@
+circle-fill = #f4f4f4
+circle-stroke = #dddbdb
+
+body
+  font-family "tablet-gothic", sans-serif
+  text-rendering optimizeLegibility
+  color #4A4A4A
+
+section
+  width 100%
+  height 100%
+
+section svg
+  width 100%
+  height 100%
+
+circle
+  fill circle-fill
+  fill-opacity 1
+  stroke circle-stroke
+  stroke-width 1px
+
+/*text
+  font-size 10px
+  color #868686
+  text-anchor middle
+
+tspan
+  alignment-baseline middle
+
+tspan.strong
+  font-weight bold
+
+text.circle-label
+  font-size 12px*/
+
+div.description
+  font-size 12px
+  position absolute
+  margin 0
+  text-align center
+  width 100%
+
+p.description
+  width 250px
+  display inline-block
+  line-height 1.2em
+
+.label
+  position absolute
+  top 0
+  left 0
+  display table
+  font-size 10px
+
+.label p
+  display table-cell
+  text-align center
+  vertical-align middle
+  margin 0
+  line-height 1.1em
+
+.pack.label
+  opacity 0
+  pointer-events none
+  transition opacity 0.5s ease
+
+.node
+  opacity 0
+
+// .stage1
+//   .pack.label, .pack.node
+//     &.all
+//       opacity 1
