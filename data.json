@@ -1,0 +1,13 @@
+{
+  "registered_voter": 3466201,
+  "election_comittee": {
+    "voter": 249499,
+    "sectors": [
+      { "id": "sector-ftit", "name": "Finance, Hotel, Insurance, and Transport", "count": 26828 },
+      { "id": "sector-ehil", "name": "Education, Health, IT, and Legal", "count": 204399 },
+      { "id": "sector-lrw", "name": "Labor, Religious, and Welfare", "count": 17572 },
+      { "id": "sector-hkcpb", "name": "HK and China Political Bodies", "count": 700 }
+    ],
+    "seats_per_sector": 300
+  }
+}

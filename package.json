@@ -1,0 +1,13 @@
+{
+  "name": "binaryabacus-hk-vote-power",
+  "version": "0.0.1",
+  "description": "Visualization about Voting Power of the Hong Kong Election Committee",
+  "main": "main.js",
+  "dependencies": {
+    "coffee-script": "^1.7.1",
+    "stylus": "^0.47.1"
+  },
+  "devDependencies": {},
+  "author": "Felix Lau <felixlaumon@gmail.com>",
+  "license": "MIT"
+}
