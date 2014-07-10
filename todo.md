@@ -2,6 +2,18 @@
 
 >
 
+## done
+
+- pop label pointer
+- better power scale
+
+## todo
+
+- highlight
+- better fit power labeling
+- power label for others
+- better centering of registered voter for power label
+
 ## research
 
 

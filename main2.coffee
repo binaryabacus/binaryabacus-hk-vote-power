@@ -1,30 +1,24 @@
+body = d3.select("body")
+svg = d3.select("svg")
+
 min_size = 1
 max_size = 300
-circle_spacing = 50
-circle_offsetY = 0
-label_margin = 40
-desc_margin = 20
-cx_left = window.innerWidth / 2 - max_size - circle_spacing
-cy = window.innerHeight / 2 - max_size - circle_offsetY
-cx_right = window.innerWidth / 2 + max_size + circle_spacing
-label_y = cy + max_size+ label_margin
-desc_x = window.innerWidth / 2
-desc_y = label_y + desc_margin
-si_format = d3.format(".3s")
 
 circle_fill = "#f4f4f4"
 stroke_fill = "#DDDBDB"
 
-first_desc = "If you are a <strong>registered voter</strong> under
-  universal suffarage, you have the <strong>same</strong> voting
-  power than anyone else"
-
-body = d3.select("body")
-svg = d3.select("svg")
+# desc_x = window.innerWidth / 2
+# desc_y = label_y + desc_margin
 force_g_offsetX = 100
 force_g_offsetY = 200
 pack_g_offsetX = 450
 pack_g_offsetY = 200
+
+pop_format = d3.format(".3s")
+power_scale = d3.scale.pow().exponent(0.25).domain([0, 3000]).range([min_size, max_size / 2])
+
+power_format = d3.format(".0f")
+
 force_g = svg.append("g")
   .attr("transform", "translate(#{ force_g_offsetX }, #{ force_g_offsetY })")
 pack_g = svg.append("g")
@@ -33,28 +27,26 @@ label_container = d3.select(".container")
   .append("div").attr("class", "label-container")
 
 d3.json("data.json", (err, data) ->
-  pop_scale = d3.scale.sqrt().domain([0, data.registered_voter]).range([min_size, max_size])
-  power_scale = d3.scale.linear().domain([0, max_size]).range([max_size, min_size])
-
-  vote_power_scaled = (d, total) -> power_scale(vote_power(d, total))
-
-  vote_power = (d, total = data.registered_voter) ->
-    d3.format(".0f")(total / d)
+  ec_voter = data.election_comittee.voter
+  ec_voter_power = data.registered_voter / ec_voter
+  sectors_length = data.election_comittee.sectors.length
 
   pack_root = {
-    id: "all",
-    name: "Registered Voter",
-    value: data.registered_voter,
-    label: { stage1: { size: "big" } },
+    id: "all"
+    name: "Registered Voter"
+    value: data.registered_voter
+    power: 1
     children: [
       {
-        id: "non-voters",
-        name: "Non-voters",
-        value: data.registered_voter - data.election_comittee.voter,
+        id: "others"
+        name: "Others"
+        value: data.registered_voter - ec_voter
+        power: 0
       }, {
         id: "ec-voters",
-        name: "Voters for Election Comittee",
-        value: data.election_comittee.voter,
+        name: "Voters for Election Comittee"
+        value: ec_voter
+        power: ec_voter_power
         children: []
       }
     ]
@@ -62,19 +54,22 @@ d3.json("data.json", (err, data) ->
 
   pack_root.children[1].children = data.election_comittee.sectors.map((sector) ->
     return {
-      id: sector.id,
-      name: sector.name,
-      value: sector.count,
+      id: sector.id
+      name: sector.name
+      value: sector.count
+      power: (ec_voter / sectors_length) / sector.count * ec_voter_power
       children: [
         {
-          id: "#{sector.id}-cm",
-          name: "Voted-in Election Comittee Members from #{sector.name}",
-          value: data.election_comittee.seats_per_sector,
+          id: "#{sector.id}-cm"
+          name: "Voted-in Election Comittee Members from #{sector.name}"
+          # name: "Voted-in Election Comittee Members"
+          value: data.election_comittee.seats_per_sector
+          power: data.registered_voter / (data.election_comittee.seats_per_sector * sectors_length)
         }, {
           id: "#{sector.id}-non-cm",
-          name: "Election Comittee Non-members from #{sector.name}",
-          value: sector.count - data.election_comittee.seats_per_sector,
-          hidden: true
+          name: "Election Comittee Non-members from #{sector.name}"
+          value: sector.count - data.election_comittee.seats_per_sector
+          power: 0
         }
       ]
     }
@@ -82,23 +77,40 @@ d3.json("data.json", (err, data) ->
 
   stage_style = {
     "stage1": [
-      { id: "all", size: "big", fill: true, label_position: "fit" }
+      { id: "all", size: "big", fill: true, pop_label: "fit", power: true }
     ],
     "stage2": [
-      { id: "all", size: "big", fill: false, label_position: "fit" }
-      { id: "non-voters", size: "big", fill: false, label_position: "fit" }
-      { id: "ec-voters", size: "big", fill: true, label_position: "fit" }
+      { id: "all", size: "big", fill: false, pop_label: false, power: false }
+      { id: "others", size: "big", fill: false, pop_label: "fit", power: true }
+      { id: "ec-voters", size: "big", fill: true, pop_label: "fit", power: true }
     ],
     "stage3": [
-      { id: "non-voters", size: "big", fill: false }
-      { id: "ec-voters", size: "big", fill: true, label_position: "fit" }
-      { id: "sector-ftit", size: "small", label_position: { x: 100, y: 100 }, fill: true }
-      { id: "sector-ehil", size: "small", label_position: { x: 100, y: 100 }, fill: true }
-      { id: "sector-lrw", size: "small", label_position: { x: 100, y: 100 }, fill: true }
-      { id: "sector-hkcpb", size: "small", label_position: { x: 100, y: 100 }, fill: true }
+      { id: "all", size: "big", fill: false, pop_label: false }
+      { id: "others", size: "big", fill: false, pop_label: "fit", power: true }
+      { id: "ec-voters", size: "big", fill: false, pop_label: false }
+      { id: "sector-lrw", size: "small", pop_label: { x: -120, y: -45 }, fill: true, power: true }
+      { id: "sector-hkcpb", size: "small", pop_label: { x: -145, y: -15 }, fill: true, power: true }
+      { id: "sector-ftit", size: "small", pop_label: { x: -110, y: 35 }, fill: true, power: true }
+      { id: "sector-ehil", size: "small", pop_label: { x: 85, y: 10 }, fill: true, power: true }
+
+      { id: "sector-lrw-cm", size: "small", pop_label: false }
+      { id: "sector-hkcpb-cm", size: "small", pop_label: false }
+      { id: "sector-ftit-cm", size: "small", pop_label: false }
+      { id: "sector-ehil-cm", size: "small", pop_label: false }
     ],
     "stage4": [
-      { id: "sector-ftit-cm", size: "small", label_position: { x: 100, y: 100 }, pointer: false }
+      { id: "all", size: "big", fill: false, pop_label: false }
+      { id: "others", size: "big", fill: false, pop_label: false, power: true }
+      { id: "ec-voters", size: "big", fill: false, pop_label: false }
+      { id: "sector-lrw", size: "small", pop_label: false, fill: false }
+      { id: "sector-hkcpb", size: "small", pop_label: false, fill: false }
+      { id: "sector-ftit", size: "small", pop_label: false, fill: false }
+      { id: "sector-ehil", size: "small", pop_label: false, fill: false }
+      # cm
+      { id: "sector-lrw-cm", size: "small", pop_label: { x: -130, y: -125 }, power: true }
+      { id: "sector-hkcpb-cm", size: "small", pop_label: { x: -145, y: -55 } }
+      { id: "sector-ftit-cm", size: "small", pop_label: { x: -120, y: -5 } }
+      { id: "sector-ehil-cm", size: "small", pop_label: { x: 65, y: -45 } }
     ]
   }
 
@@ -108,7 +120,7 @@ d3.json("data.json", (err, data) ->
 
   pack_data = pack.nodes(pack_root).filter((d) -> return !d.hidden )
 
-  pack_node = pack_g.selectAll(".pack.node").data(pack_data)
+  pop_nodes = pack_g.selectAll(".pop.node").data(pack_data)
     .enter().append("g")
       .attr("transform", (d) ->
         cpoint = { x: max_size / 2, y: max_size / 2 }
@@ -117,57 +129,142 @@ d3.json("data.json", (err, data) ->
         d.pack_y = pt.y
         return "translate(#{d.pack_x}, #{d.pack_y})"
       )
-      .attr("class", (d) -> "pack node #{d.id}")
+      .attr("id", (d) -> "pop-#{d.id}")
+      .attr("class", (d) -> "pop node #{d.id}")
 
-  pack_node.append("circle")
+  pop_nodes.append("circle")
     .attr("r", (d) -> return d.r)
 
-  pack_label = label_container.selectAll(".pack.label").data(pack_data)
+  pop_labels = label_container.selectAll(".pack.label").data(pack_data)
     .enter().append("div")
       .attr("class", (d) -> "pack label #{d.id}")
       .attr("id", (d) -> "label-#{d.id}")
-      .style("top", (d) -> pack_g_offsetY + d.pack_y - d.r)
-      .style("left", (d) -> pack_g_offsetX + d.pack_x - d.r)
-      .style("width", (d) -> d.r * 2)
-      .style("height", (d) -> d.r * 2)
+      .style("top", (d) -> d.label_top = pack_g_offsetY + d.pack_y - d.r)
+      .style("left", (d) -> d.label_left = pack_g_offsetX + d.pack_x - d.r)
+      .style("width", (d) -> d.label_width = d.r * 2)
+      .style("height", (d) -> d.label_height = d.r * 2)
 
-  pack_label.append("p")
-    .html((d) -> "<strong>#{d.name}</strong> #{vote_power(d.value)}x")
+  pop_labels.append("p")
+    .html((d) -> "<strong>#{d.name}</strong> #{pop_format(d.value)}")
 
   force_data = []
-  force_node = force_g.selectAll(".force.node").data(force_data)
-  force = d3.layout.force()
+  force_nodes = force_g.selectAll(".force.node").data(force_data)
+  window.force = force = d3.layout.force()
     .links([])
-    .size([max_size, max_size])
-    .charge((d) -> return -20 * power_scale(d.r) )
+    .size([300, 300])
+    .charge((d) -> -15 * d.force_r )
+    .on("tick", (e) ->
+      force_nodes.attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
+      force_labels.style("-webkit-transform", (d) -> "translate3d(#{d.x + force_g_offsetX - d.force_r}px, #{d.y + force_g_offsetY - d.force_r}px, 0px)")
+    )
 
-  force.on("tick", (e) ->
-    force_node.attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
-  )
+  force_labels = label_container.selectAll(".power.label").data(force_data)
 
-  update = (stage) ->
+  window.update = update = (stage) ->
     styles = stage_style[stage]
     body.attr("class", stage)
 
+    pop_nodes.style("opacity", 0)
+    pop_labels.style("opacity", 0)
+    d3.selectAll(".label-link").remove()
+
+    force_data = []
+
     styles.forEach (style) ->
-      pack_node.filter (d) -> d.id is style.id
-        .style "opacity", 1
+      data = pack_data.filter (d) -> d.id is style.id and style.power
+      if data.length
+        data[0].style = style
+        force_data.push(data[0])
 
-      pack_label.filter (d) -> d.id is style.id
-        .style "opacity", 1
+      pop_nodes.filter (d) -> d.id is style.id
+        .style("opacity", 1)
+        .selectAll("circle")
+        .style("fill", (d) -> if style.fill then null else "#FDFDFD")
 
-      force_data = pack_data.filter (d) -> d.id is style.id
-      force_node = force_g.selectAll(".force.node").data(force_data)
-      force_node.exit().remove()
-      force_node.enter().append("g")
-          .attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
-          .attr("id", (d) -> "power-#{d.id}"; )
-            .append("circle")
-              .attr("r", (d) -> power_scale(d.r) )
+      pop_labels.filter (d) -> d.id is style.id
+        .style("width", (d) ->
+          d.label_width = if typeof style.pop_label is "object" then 100 else d.label_width
+        ).style("top", (d) ->
+          if typeof style.pop_label is "object"
+            d.label_top + style.pop_label.y
+          else
+            d.label_top
+        ).style("left", (d) ->
+          if typeof style.pop_label is "object"
+            d.label_left + style.pop_label.x
+          else
+            d.label_left
+        )
+        .transition().duration(500)
+          .style("opacity", (d) -> if style.pop_label then 1 else 0)
 
-      force.start()
+      if typeof style.pop_label is "object"
+        pop_labels.filter (d) -> d.id is style.id
+          .each((d) ->
+            label_height = parseFloat(d3.select(this).style("height"))
+            pack_g.append("line").datum(d)
+              .attr("class", "label-link" )
+              .attr("x1", (d) -> d.pack_x )
+              .attr("y1", (d) -> d.pack_y )
+              .attr("x2", (d) ->
+                offset = if style.pop_label.x > 0 then -5 else d.label_width + 5
+                d.label_left + style.pop_label.x - pack_g_offsetX + offset )
+              .attr("y2", (d) -> d.label_top + style.pop_label.y - pack_g_offsetY + label_height / 2 )
+        )
 
-  update("stage2")
+    others = pack_root.children[1]
+    all = pack_root
+    { x: othersx, y: othersy } = others
+    { x: allx, y: ally } = all
+    all.x = all.px = othersx
+    all.y = all.py = othersy
+    others.x = others.px = allx
+    others.y = others.py = ally
+
+    force_nodes = force_nodes.data(force_data, (d) ->
+      # HACK: for transitioning all into others and others into all
+      if d.id is "all"
+        "others"
+      else
+        d.id )
+    force_nodes.attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
+      .select("circle").transition().duration(500)
+        .attr("r", (d) -> d.force_r = power_scale(d.power) )
+    force_nodes.exit().remove()
+    force_nodes.enter().append("g")
+      .each((d) ->
+        # d.px = d.x += Math.random() * 50 - 25
+        # d.py = d.y += Math.random() * 50 - 25
+        delete d.px
+        delete d.py
+        delete d.x
+        delete d.y)
+      # .attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
+      .attr("id", (d) -> "power-#{d.id}"; )
+        .append("circle")
+          # .attr("r", 0)
+          # .transition().duration(500)
+          .attr("r", (d) -> d.force_r = power_scale(d.power) )
+
+    force_labels.remove()
+    force_labels = label_container.selectAll(".power.label").data(force_data)
+    force_labels.enter().append("div")
+      .attr("class", (d) -> "power label #{d.id}")
+      .attr("id", (d) -> "label-#{d.id}")
+      .style("width", (d) -> d.force_r * 2)
+      .style("height", (d) -> d.force_r * 2)
+      .append("p")
+        .html((d) ->
+          "<strong>#{d.name}</strong> #{(power_format(d.power))}x")
+
+    force.nodes(force_data).start()
+
+  update("stage4")
+
+  d3.select("button#stage1").on "click", -> update("stage1")
+  d3.select("button#stage2").on "click", -> update("stage2")
+  d3.select("button#stage3").on "click", -> update("stage3")
+  d3.select("button#stage4").on "click", -> update("stage4")
 )
 
 # http://stackoverflow.com/questions/2259476/rotating-a-point-about-another-point-2d
