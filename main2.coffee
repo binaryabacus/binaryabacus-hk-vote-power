@@ -1,3 +1,6 @@
+debug = true
+log = if debug then console.log.bind(console) else () ->
+
 body = d3.select("body")
 svg = d3.select("svg")
 
@@ -11,11 +14,17 @@ stroke_fill = "#DDDBDB"
 # desc_y = label_y + desc_margin
 force_g_offsetX = 100
 force_g_offsetY = 200
-pack_g_offsetX = 450
+pack_g_offsetX = 600
 pack_g_offsetY = 200
 
 pop_format = d3.format(".3s")
-power_scale = d3.scale.pow().exponent(0.25).domain([0, 3000]).range([min_size, max_size / 2])
+power_scale = d3.scale.pow().exponent(0.25)
+  .domain([0, 3000])
+  .range([min_size, max_size / 3])
+charge_scale = d3.scale.log()
+  .clamp(true)
+  .domain([0, max_size / 2])
+  .range([0, 300])
 
 power_format = d3.format(".0f")
 
@@ -31,22 +40,27 @@ d3.json("data.json", (err, data) ->
   ec_voter_power = data.registered_voter / ec_voter
   sectors_length = data.election_comittee.sectors.length
 
+  get_style = (id, styles) -> styles.filter((s) -> s.id is id)[0]
+
   pack_root = {
     id: "all"
     name: "Registered Voter"
     value: data.registered_voter
     power: 1
+    link: ["others"]
     children: [
       {
         id: "others"
         name: "Others"
         value: data.registered_voter - ec_voter
+        link: ["all"]
         power: 0
       }, {
         id: "ec-voters",
         name: "Voters for Election Comittee"
         value: ec_voter
         power: ec_voter_power
+        link: data.election_comittee.sectors.map((s) -> s.id)
         children: []
       }
     ]
@@ -58,12 +72,15 @@ d3.json("data.json", (err, data) ->
       name: sector.name
       value: sector.count
       power: (ec_voter / sectors_length) / sector.count * ec_voter_power
+      link: ["#{sector.id}-cm", "ec-voters"]
+      # link: ["#{sector.id}-cm"]
       children: [
         {
           id: "#{sector.id}-cm"
           name: "Voted-in Election Comittee Members from #{sector.name}"
           # name: "Voted-in Election Comittee Members"
           value: data.election_comittee.seats_per_sector
+          link: sector.id
           power: data.registered_voter / (data.election_comittee.seats_per_sector * sectors_length)
         }, {
           id: "#{sector.id}-non-cm",
@@ -81,17 +98,17 @@ d3.json("data.json", (err, data) ->
     ],
     "stage2": [
       { id: "all", size: "big", fill: false, pop_label: false, power: false }
-      { id: "others", size: "big", fill: false, pop_label: "fit", power: true }
+      { id: "others", size: "big", fill: false, pop_label: "fit", power: true, padding: 50 }
       { id: "ec-voters", size: "big", fill: true, pop_label: "fit", power: true }
     ],
     "stage3": [
       { id: "all", size: "big", fill: false, pop_label: false }
-      { id: "others", size: "big", fill: false, pop_label: "fit", power: true }
+      { id: "others", size: "big", fill: false, pop_label: "fit", power: true, padding: 50 }
       { id: "ec-voters", size: "big", fill: false, pop_label: false }
-      { id: "sector-lrw", size: "small", pop_label: { x: -120, y: -45 }, fill: true, power: true }
-      { id: "sector-hkcpb", size: "small", pop_label: { x: -145, y: -15 }, fill: true, power: true }
-      { id: "sector-ftit", size: "small", pop_label: { x: -110, y: 35 }, fill: true, power: true }
-      { id: "sector-ehil", size: "small", pop_label: { x: 85, y: 10 }, fill: true, power: true }
+      { id: "sector-lrw", size: "small", pop_label: { x: -120, y: -45 }, fill: true, power: true, padding: 40 }
+      { id: "sector-hkcpb", size: "small", pop_label: { x: -145, y: -15 }, fill: true, power: true, padding: 40 }
+      { id: "sector-ftit", size: "small", pop_label: { x: -110, y: 35 }, fill: true, power: true, padding: 40 }
+      { id: "sector-ehil", size: "small", pop_label: { x: 85, y: 10 }, fill: true, power: true, padding: 40 }
 
       { id: "sector-lrw-cm", size: "small", pop_label: false }
       { id: "sector-hkcpb-cm", size: "small", pop_label: false }
@@ -100,7 +117,7 @@ d3.json("data.json", (err, data) ->
     ],
     "stage4": [
       { id: "all", size: "big", fill: false, pop_label: false }
-      { id: "others", size: "big", fill: false, pop_label: false, power: true }
+      { id: "others", size: "big", fill: false, pop_label: false, power: true, padding: 50 }
       { id: "ec-voters", size: "big", fill: false, pop_label: false }
       { id: "sector-lrw", size: "small", pop_label: false, fill: false }
       { id: "sector-hkcpb", size: "small", pop_label: false, fill: false }
@@ -108,9 +125,9 @@ d3.json("data.json", (err, data) ->
       { id: "sector-ehil", size: "small", pop_label: false, fill: false }
       # cm
       { id: "sector-lrw-cm", size: "small", pop_label: { x: -130, y: -125 }, power: true }
-      { id: "sector-hkcpb-cm", size: "small", pop_label: { x: -145, y: -55 } }
-      { id: "sector-ftit-cm", size: "small", pop_label: { x: -120, y: -5 } }
-      { id: "sector-ehil-cm", size: "small", pop_label: { x: 65, y: -45 } }
+      { id: "sector-hkcpb-cm", size: "small", pop_label: { x: -145, y: -55 }, power: true }
+      { id: "sector-ftit-cm", size: "small", pop_label: { x: -120, y: -5 }, power: true }
+      { id: "sector-ehil-cm", size: "small", pop_label: { x: 65, y: -45 }, power: true }
     ]
   }
 
@@ -150,17 +167,28 @@ d3.json("data.json", (err, data) ->
   force_data = []
   force_nodes = force_g.selectAll(".force.node").data(force_data)
   window.force = force = d3.layout.force()
+    .gravity(0.05)
     .links([])
     .size([300, 300])
-    .charge((d) -> -15 * d.force_r )
+    # .charge((d) -> -0.01 * d.force_r * d.force_r )
+    .charge(0)
     .on("tick", (e) ->
+      force_nodes.each(collide(e.alpha, force_data))
       force_nodes.attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
-      force_labels.style("-webkit-transform", (d) -> "translate3d(#{d.x + force_g_offsetX - d.force_r}px, #{d.y + force_g_offsetY - d.force_r}px, 0px)")
+      force_labels.style("-webkit-transform", (d) ->
+        width_offset = if parseFloat(this.style.width) is 100 then -50 + d.force_r else 0
+        x = d.x + force_g_offsetX - d.force_r + width_offset
+        y = d.y + force_g_offsetY - d.force_r
+        "translate3d(#{x}px, #{y}px, 0px)")
     )
 
   force_labels = label_container.selectAll(".power.label").data(force_data)
 
+  cur_stage = ''
   window.update = update = (stage) ->
+    return if stage is cur_stage
+
+    cur_stage = stage
     styles = stage_style[stage]
     body.attr("class", stage)
 
@@ -195,7 +223,7 @@ d3.json("data.json", (err, data) ->
           else
             d.label_left
         )
-        .transition().duration(500)
+        .transition().duration(1000)
           .style("opacity", (d) -> if style.pop_label then 1 else 0)
 
       if typeof style.pop_label is "object"
@@ -212,14 +240,28 @@ d3.json("data.json", (err, data) ->
               .attr("y2", (d) -> d.label_top + style.pop_label.y - pack_g_offsetY + label_height / 2 )
         )
 
-    others = pack_root.children[1]
-    all = pack_root
-    { x: othersx, y: othersy } = others
-    { x: allx, y: ally } = all
-    all.x = all.px = othersx
-    all.y = all.py = othersy
-    others.x = others.px = allx
-    others.y = others.py = ally
+    # others = pack_root.children[1]
+    # all = pack_root
+    # { x: othersx, y: othersy } = others
+    # { x: allx, y: ally } = all
+    # all.x = all.px = othersx
+    # all.y = all.py = othersy
+    # others.x = others.px = allx
+    # others.y = others.py = ally
+
+    force_data.forEach ((d) ->
+      linked = (pack_data.filter((l) -> (d.link or []).indexOf(l.id) >= 0))
+      d.x = d3.mean(linked.map((l) -> l.x + random(-2, 2)))
+      d.y = d3.mean(linked.map((l) -> l.y + random(-2, 2)))
+      d.px = d3.mean(linked.map((l) -> l.x + random(-2, 2)))
+      d.py = d3.mean(linked.map((l) -> l.y + random(-2, 2)))
+      d.force_r = d3.mean(linked.map((l) -> l.force_r))
+      linked.forEach((l) ->
+        l.force_r = l.x = l.y = l.px = l.py = undefined)
+        # l.px = l.py = undefined)
+      # log(d.x, d.y, d.px, d.py)
+      linked.forEach((l) -> log("setting #{d.id} from #{l.id}"))
+    )
 
     force_nodes = force_nodes.data(force_data, (d) ->
       # HACK: for transitioning all into others and others into all
@@ -228,38 +270,44 @@ d3.json("data.json", (err, data) ->
       else
         d.id )
     force_nodes.attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
-      .select("circle").transition().duration(500)
+      .select("circle").transition().duration(1000)
         .attr("r", (d) -> d.force_r = power_scale(d.power) )
-    force_nodes.exit().remove()
+    force_nodes.exit().select("circle")
+      .transition().duration(1000)
+        .attr("r", 0)
+      .each("end", () -> this.parentNode.remove())
     force_nodes.enter().append("g")
-      .each((d) ->
-        # d.px = d.x += Math.random() * 50 - 25
-        # d.py = d.y += Math.random() * 50 - 25
-        delete d.px
-        delete d.py
-        delete d.x
-        delete d.y)
-      # .attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
       .attr("id", (d) -> "power-#{d.id}"; )
         .append("circle")
-          # .attr("r", 0)
-          # .transition().duration(500)
-          .attr("r", (d) -> d.force_r = power_scale(d.power) )
+          .transition().duration(1000).tween("force_r", (d) ->
+            i = d3.interpolate(d.force_r or 0, power_scale(d.power))
+            (t) ->
+              d.force_r = r = i(t)
+              this.setAttribute("r", r)
+              )
+    force_nodes.call(force.drag)
 
-    force_labels.remove()
     force_labels = label_container.selectAll(".power.label").data(force_data)
+    force_labels
+      .attr("class", (d) -> "power label #{d.id}")
+      .attr("id", (d) -> "label-#{d.id}")
+      .style("width", (d) -> Math.max(power_scale(d.power) * 2, 100))
+      .style("height", (d) -> power_scale(d.power) * 2)
+      .select("p").html((d) -> "<strong>#{d.name}</strong> #{(power_format(d.power))}x")
+    force_labels.exit().transition().duration(1000).style("opacity", 0).remove()
     force_labels.enter().append("div")
       .attr("class", (d) -> "power label #{d.id}")
       .attr("id", (d) -> "label-#{d.id}")
-      .style("width", (d) -> d.force_r * 2)
-      .style("height", (d) -> d.force_r * 2)
+      .style("width", (d) -> Math.max(power_scale(d.power) * 2, 100))
+      .style("height", (d) -> power_scale(d.power) * 2)
       .append("p")
-        .html((d) ->
-          "<strong>#{d.name}</strong> #{(power_format(d.power))}x")
+        .html((d) -> "<strong>#{d.name}</strong> #{(power_format(d.power))}x")
+          .style("opacity", 0)
+          .transition().duration(1000).style("opacity", 1)
 
     force.nodes(force_data).start()
 
-  update("stage4")
+  update("stage1")
 
   d3.select("button#stage1").on "click", -> update("stage1")
   d3.select("button#stage2").on "click", -> update("stage2")
@@ -304,3 +352,30 @@ wrap = (text, width) ->
           .attr("dy", ++lineNumber * lineHeight + dy + "em")
           .text(word)
   )
+
+random = (min, max) -> Math.random() * (max - min) + min
+
+# http://bl.ocks.org/mbostock/7881887
+collide = (alpha, force_data) ->
+  alpha = alpha * 0.25
+  quadtree = d3.geom.quadtree(force_data)
+  (d) ->
+    padding = d.style.padding or 20
+    r = d.force_r + padding
+    nx1 = d.x - r
+    nx2 = d.x + r
+    ny1 = d.y - r
+    ny2 = d.y + r
+    quadtree.visit (quad, x1, y1, x2, y2) ->
+      if quad.point and (quad.point isnt d)
+        x = d.x - quad.point.x
+        y = d.y - quad.point.y
+        l = Math.sqrt(x * x + y * y)
+        r = d.force_r + quad.point.force_r + padding
+        if l < r
+          l = (l - r) / l * alpha
+          d.x -= x *= l
+          d.y -= y *= l
+          quad.point.x += x
+          quad.point.y += y
+      x1 > nx2 or x2 < nx1 or y1 > ny2 or y2 < ny1

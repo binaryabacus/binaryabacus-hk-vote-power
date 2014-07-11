@@ -9,6 +9,7 @@
 
 ## todo
 
+- circle transition (from / to)
 - highlight
 - better fit power labeling
 - power label for others

@@ -1,3 +1,4 @@
 node_modules
 *.sketch
 .DS_Store
+*.numbers
