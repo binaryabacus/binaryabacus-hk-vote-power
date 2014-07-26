@@ -6,10 +6,11 @@
 
 - pop label pointer
 - better power scale
+- circle transition (from / to)
 
 ## todo
 
-- circle transition (from / to)
+- rewrite data structure
 - highlight
 - better fit power labeling
 - power label for others
