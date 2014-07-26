@@ -2,21 +2,11 @@
 
 >
 
-## done
-
-- pop label pointer
-- better power scale
-- circle transition (from / to)
-
 ## todo
 
-- rewrite data structure
-- highlight
-- better fit power labeling
-- power label for others
-- better centering of registered voter for power label
+- improve animation
 
-## research
+- implement label
 
 
 ## example
@@ -42,9 +32,3 @@
 - http://hkumath.hku.hk/~imr/IMRPreprintSeries/2014/IMR2014-1.pdf
 - http://muse.jhu.edu/books/9789888053452
 - http://books.google.com/books?id=Px1WflAKjwEC&pg=PA40&lpg=PA40&dq=hong+kong+election+committee&source=bl&ots=Xh72R-9FDv&sig=xLIkl95zIp78AioLkU20462n3O0&hl=en&sa=X&ei=FpC5U9XRC5Lf8AW_zYDwCg&ved=0CE8Q6AEwBTgU#v=onepage&q=power&f=false
-
-- how to calculate voting power?
-3500k
-249k ((3500 - 249) / 249 = 13.1
-700 ((3500 - 0.7) / 0.7 ) = 4999
-200 ()
