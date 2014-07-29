@@ -94,7 +94,7 @@ d3.json "data.json", (err, data) ->
       force_nodes
         .each collide(e.alpha, force_data)
         .attr "transform", (d) -> "translate(#{d.x}, #{d.y})"
-      force_labels.style "-webkit-transform", (d) ->
+      force_labels.style "transform", (d) ->
         # offset label so that they are centered
         width_offset = if parseFloat(this.style.width) is 100 then -50 + d.r else 0
         d.force_x = d.x + force_g_offsetX - d.r + width_offset
@@ -111,16 +111,32 @@ d3.json "data.json", (err, data) ->
           d.r = i(t)
           this.setAttribute("r", d.r)
       )
-    force_nodes.enter().append("g")
+    enter_nodes = force_nodes.enter().append("g")
       .attr "class", "force node"
-      .append("circle")
-        .attr "id", (d) -> d.id
-        .transition().duration(if first_run then 0 else 1000).tween 'force_r_enter', (d) ->
-          console.log "added", d.id
-          i = d3.interpolate(this.getAttribute("r") or 0, power_scale d.value)
-          (t) ->
-            d.r = i(t)
-            this.setAttribute "r", d.r
+    enter_nodes.transition().duration(1000).tween "force_translate_enter", (d) ->
+      enter_link_nodes = last_force_data.filter (e) -> d.enter?.indexOf(e.id) >= 0
+      circle = d3.select(this).select("circle")
+      target = enter_link_nodes[0];
+      original_r = target?.r or 0
+      if (target)
+        random_x = random(-5, 5)
+        random_y = random(-5, 5)
+        d.px = target.px + random_x
+        d.py = target.py + random_y
+        d.x = target.x + random_x
+        d.y = target.y + random_y
+      target_r = power_scale d.value
+      i_r = d3.interpolate(original_r, target_r)
+      # Set initial transform to prevent flash
+      d3.select(this).attr("transform", "translate(#{d.x}, #{d.y})")
+      (t) ->
+        d.r = i_r t
+        d.collide_factor = if t > 0.9 then 1 else d3.scale.sqrt()(t)
+        # d.no_collide = true
+        circle.attr "r", d.r
+    enter_nodes.append("circle")
+      .attr "id", (d) -> d.id
+
     force_nodes.exit()
       .transition().duration(1000).tween "force_translate_exit", (d) ->
         console.log "removed", d.id
@@ -207,7 +223,7 @@ d3.json "data.json", (err, data) ->
 
     # TODO ec-voters should "split" into four nodes
     force_data = power_data[stage]
-    last_force_data = power_data[cur_stage]
+    last_force_data = power_data[cur_stage] or []
 
     # Copy the position of the last node to the current node
     # so no weird animation
@@ -227,7 +243,7 @@ d3.json "data.json", (err, data) ->
 
     first_run = false
 
-  update "stage3", 2
+  update "stage1", 0
 
   d3.select("button#stage1").on "click", -> update("stage1", 0)
   d3.select("button#stage2").on "click", -> update("stage2", 1)
@@ -274,7 +290,7 @@ init_power_data = (data) ->
       name: sector.name
       value: (ec_voter / sectors_length) / sector.count * ec_voter_power
       exit: ["ec-voters"]
-      enter: ["ec_voters"]
+      enter: ["ec-voters"]
     )
     power_data.stage4.push(
       id: sector.id
@@ -363,13 +379,14 @@ collide = (alpha, force_data) ->
     ny1 = d.y - r
     ny2 = d.y + r
     quadtree.visit (quad, x1, y1, x2, y2) ->
-      if quad.point and (quad.point isnt d)
+      if quad.point and (quad.point isnt d) and !quad.point.no_collide
         x = d.x - quad.point.x
         y = d.y - quad.point.y
         l = Math.sqrt(x * x + y * y)
         r = d.r + quad.point.r + padding
+        collide_factor = d.collide_factor or 1
         if l < r
-          l = (l - r) / l * alpha
+          l = (l - r) / l * alpha * collide_factor
           d.x -= x *= l
           d.y -= y *= l
           quad.point.x += x
@@ -396,3 +413,5 @@ get_translate = (el) ->
 
   x: transform.translate[0]
   y: transform.translate[1]
+
+random = (min, max) -> Math.random() * (max - min) + min
