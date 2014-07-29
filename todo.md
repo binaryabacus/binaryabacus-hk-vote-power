@@ -5,7 +5,7 @@
 ## todo
 
 - improve animation
-
+  - collapsible http://bl.ocks.org/mbostock/1062288
 - implement label
 
 

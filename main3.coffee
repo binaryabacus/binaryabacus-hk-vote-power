@@ -82,6 +82,7 @@ d3.json "data.json", (err, data) ->
   # -- FORCE INITIALIZATION -- #
 
   force_data = []
+  last_force_data = force_data
   force_nodes = force_g.selectAll(".force.node").data(force_data, (d) -> d.id)
   force_labels = label_container.selectAll(".power.label").data(force_data)
   force = d3.layout.force()
@@ -96,9 +97,9 @@ d3.json "data.json", (err, data) ->
       force_labels.style "-webkit-transform", (d) ->
         # offset label so that they are centered
         width_offset = if parseFloat(this.style.width) is 100 then -50 + d.r else 0
-        x = d.x + force_g_offsetX - d.r + width_offset
-        y = d.y + force_g_offsetY - d.r
-        "translate3d(#{x}px, #{y}px, 0px)"
+        d.force_x = d.x + force_g_offsetX - d.r + width_offset
+        d.force_y = d.y + force_g_offsetY - d.r
+        "translate3d(#{d.force_x}px, #{d.force_y}px, 0px)"
 
   update_force_node = () ->
     force_nodes = force_g.selectAll(".force.node").data(force_data, (d) -> d.id)
@@ -114,20 +115,27 @@ d3.json "data.json", (err, data) ->
       .attr "class", "force node"
       .append("circle")
         .attr "id", (d) -> d.id
-        .transition().duration(1000).tween 'force_r_enter', (d) ->
+        .transition().duration(if first_run then 0 else 1000).tween 'force_r_enter', (d) ->
           console.log "added", d.id
           i = d3.interpolate(this.getAttribute("r") or 0, power_scale d.value)
           (t) ->
             d.r = i(t)
             this.setAttribute "r", d.r
-    force_nodes.exit().select("circle")
-      .transition().duration(1000).tween 'force_r_exit', (d) ->
+    force_nodes.exit()
+      .transition().duration(1000).tween "force_translate_exit", (d) ->
         console.log "removed", d.id
-        i = d3.interpolate d.r or 0, 0
+        exit_link_nodes = force_data.filter (e) -> d.exit?.indexOf(e.id) >= 0
+        target = exit_link_nodes[0];
+
+        original = get_translate this
+        circle = d3.select(this).select('circle')
+        original_r = circle.attr "r"
         (t) ->
-          d.r = i(t)
-          this.setAttribute "r", d.r
-      .each "end", () -> this.parentNode.remove()
+          if target
+            pos = move_to original, target, t
+            this.setAttribute "transform", "translate(#{pos.x}, #{pos.y})"
+          circle.attr "r", scale_to original_r, target?.r or 0, t
+      .each "end", () -> this.remove()
 
     force_labels = label_container.selectAll(".power.label").data(force_data, (d) -> d.id)
     force_labels
@@ -147,8 +155,11 @@ d3.json "data.json", (err, data) ->
       .append("p")
         .html (d) -> "<strong>#{d.name}</strong> #{(power_format(d.value))}x"
           .style "opacity", 0
-          .transition().duration(1000).style "opacity", 1
-    force_labels.exit().transition().duration(1000).style("opacity", 0).remove()
+          .transition().delay(if first_run then 0 else 500).duration(1000).style "opacity", 1
+    # force_labels.exit().transition().duration(1000).style("opacity", 0).remove()
+    force_labels.exit()
+      .transition().duration(250).style "opacity", 0
+      .each "end", () -> this.remove()
 
     force
       .nodes(force_data)
@@ -190,6 +201,7 @@ d3.json "data.json", (err, data) ->
 
   cur_stage = ""
   cur_depth = 0
+  first_run = true
   update = (stage, depth) ->
     return if stage is cur_stage
 
@@ -202,9 +214,9 @@ d3.json "data.json", (err, data) ->
     if (last_force_data)
       force_data.forEach (d) ->
         match_nodes = last_force_data.filter (e) -> d.id is e.id
-        if (match_nodes[0])
-          d.x = match_nodes[0].x
-          d.y = match_nodes[0].y
+        match_nodes.forEach (e) ->
+          d.x = e.x
+          d.y = e.y
 
     update_force_node()
     update_pack_node(depth)
@@ -213,7 +225,9 @@ d3.json "data.json", (err, data) ->
     cur_depth = depth
     log cur_stage, cur_depth
 
-  update "stage1", 0
+    first_run = false
+
+  update "stage3", 2
 
   d3.select("button#stage1").on "click", -> update("stage1", 0)
   d3.select("button#stage2").on "click", -> update("stage2", 1)
@@ -259,6 +273,8 @@ init_power_data = (data) ->
       id: sector.id
       name: sector.name
       value: (ec_voter / sectors_length) / sector.count * ec_voter_power
+      exit: ["ec-voters"]
+      enter: ["ec_voters"]
     )
     power_data.stage4.push(
       id: sector.id
@@ -359,3 +375,24 @@ collide = (alpha, force_data) ->
           quad.point.x += x
           quad.point.y += y
       x1 > nx2 or x2 < nx1 or y1 > ny2 or y2 < ny1
+
+find_centroid = (pts) ->
+  pts = pts.map (pt) -> [pt.x, pt.y]
+  poly = d3.geom.polygon(pts)
+  centroid = poly.centroid()
+
+  x: centroid[0]
+  y: centroid[1]
+
+move_to = (original, target, t) ->
+  x: d3.interpolate(original.x, target.x)(t)
+  y: d3.interpolate(original.y, target.y)(t)
+
+scale_to = (original_r, target_r, t) ->
+  d3.interpolate(original_r, target_r)(t)
+
+get_translate = (el) ->
+  transform = d3.transform(el.getAttribute("transform"));
+
+  x: transform.translate[0]
+  y: transform.translate[1]
