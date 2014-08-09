@@ -56,11 +56,34 @@ p.description {
   margin: 0;
   line-height: 1.1em;
 }
-.pack.node {
-  transition: opacity 0.5s ease;
-}
 .label-link {
   stroke-width: 1px;
   stroke: #dadada;
+}
+.node {
+  transition: opacity 0.5s ease;
+}
+.pack.node circle {
+  transition: fill 0.5s ease;
+}
+.pack.node.no-fill circle {
+  fill: rgba(0,0,0,0);
+}
+svg.highlighted .node {
+  opacity: 0.4;
+}
+svg.highlighted .node.active {
+  opacity: 1;
+  stroke: #1d77df;
+}
+svg.highlighted .node.active circle {
+  stroke: #1d77df;
+}
+svg.highlighted line.active-link {
+  stroke: #1d77df;
+}
+.label-link,
+.pack.no-fill {
+  pointer-events: none;
 }
 

@@ -4,6 +4,8 @@ log = if debug then console.log.bind(console) else () ->
 min_size = 1
 max_size = 300
 
+# TODO: use margin for positioning (http://bl.ocks.org/mbostock/3087986)
+
 force_g_offsetX = 100
 force_g_offsetY = 200
 pack_g_offsetX = 600
@@ -101,6 +103,8 @@ d3.json "data.json", (err, data) ->
         d.force_y = d.y + force_g_offsetY - d.r
         "translate3d(#{d.force_x}px, #{d.force_y}px, 0px)"
 
+  # -- Force Layout Update -- #
+
   update_force_node = () ->
     force_nodes = force_g.selectAll(".force.node").data(force_data, (d) -> d.id)
     force_nodes.select("circle")
@@ -183,17 +187,27 @@ d3.json "data.json", (err, data) ->
 
     force_nodes.call force.drag
 
-  update_pack_node = (depth) ->
-    pack_nodes.select("circle")
-      .filter (d) -> d.depth isnt depth
-      .transition()
-        .style "fill", "none"
+  # -- Pack Layout Update -- #
 
-    pack_nodes.select("circle")
+  update_pack_node = (depth) ->
+    # pack_nodes.select("circle")
+    #   .filter (d) -> d.depth isnt depth
+    #   .transition()
+    #     .style "fill", "none"
+
+    # pack_nodes.select("circle")
+    #   .filter (d) -> d.depth is depth
+    #   .style "fill", ""
+    #   .transition()
+    #     .style "opacity", 1
+
+    pack_nodes
       .filter (d) -> d.depth is depth
-      .style "fill", ""
-      .transition()
-        .style "opacity", 1
+      .classed "no-fill", false
+
+    pack_nodes
+      .filter (d) -> d.depth isnt depth
+      .classed "no-fill", true
 
     pop_labels
       .style "opacity", 0
@@ -214,14 +228,89 @@ d3.json "data.json", (err, data) ->
       .style "top", (d) -> d.label_top + d.label_pos.y
       .style "left", (d) -> d.label_left + d.label_pos.x
 
+  # -- Mouse Selection -- #
+
+  show_link = (pack_node, force_node) ->
+    svg.classed "highlighted", true
+    return if !active_force_node?.size() or !active_pack_node?.size()
+
+    # TODO set active to labels too
+    active_pack_node.classed "active", true
+    active_force_node.classed "active", true
+
+  hide_link = () ->
+    svg.classed "highlighted", false
+    return if !active_force_node?.size() or !active_pack_node?.size()
+
+    active_pack_node.classed "active", false
+    active_force_node.classed "active", false
+
+  active_pack_node = null
+  active_force_node = null
+
+  update_active_links = () ->
+    return if !active_force_node?.size() or !active_pack_node?.size()
+
+    point1 =
+      x: active_force_node.datum().x + force_g_offsetX, y: active_force_node.datum().y + force_g_offsetY
+    point2 =
+      x: active_pack_node.datum().pack_x + pack_g_offsetX, y: active_pack_node.datum().pack_y + pack_g_offsetY
+    radius1 = active_force_node.datum().r
+    radius2 = active_pack_node.datum().r
+    tangents = get_common_tangent point1, point2, radius1, radius2
+  
+    active_links = svg.selectAll("line.active-link").data(tangents)
+      .attr "x1", (d) -> d[0][0]
+      .attr "y1", (d) -> d[0][1]
+      .attr "x2", (d) -> d[1][0]
+      .attr "y2", (d) -> d[1][1]
+    active_links.enter()
+      .append "line"
+      .attr "class", "active-link"
+      .attr "x1", (d) -> d[0][0]
+      .attr "y1", (d) -> d[0][1]
+      .attr "x2", (d) -> d[1][0]
+      .attr "y2", (d) -> d[1][1]
+    active_links.exit()
+      .remove()
+
+
+  force.on "tick.update-active-link", update_active_links
+
+  update_mouse_binding = (depth) ->
+    pack_nodes
+      .on "mousemove", () ->
+        active_pack_node = d3.select this
+        pack_node_name = active_pack_node.datum().name
+        active_force_node = force_nodes.filter (d) -> d.name is pack_node_name
+        if active_pack_node?.size() and active_force_node?.size()
+          show_link()
+          update_active_links()
+      .on "mouseout", () ->
+        hide_link()
+        active_force_node = active_pack_node = null
+
+    force_nodes
+      .on "mousemove", () ->
+        active_force_node = d3.select(this)
+        force_node_name = active_force_node.datum().name
+        active_pack_node = pack_nodes.filter (d) -> d.name is force_node_name
+        if active_pack_node?.size() and active_force_node?.size()
+          show_link()
+          update_active_links()
+      .on "mouseout", () ->
+        hide_link()
+        active_force_node = active_pack_node = null
+
+  # -- Main Update -- #
 
   cur_stage = ""
   cur_depth = 0
   first_run = true
+
   update = (stage, depth) ->
     return if stage is cur_stage
 
-    # TODO ec-voters should "split" into four nodes
     force_data = power_data[stage]
     last_force_data = power_data[cur_stage] or []
 
@@ -236,6 +325,7 @@ d3.json "data.json", (err, data) ->
 
     update_force_node()
     update_pack_node(depth)
+    update_mouse_binding(depth)
 
     cur_stage = stage
     cur_depth = depth
@@ -249,6 +339,8 @@ d3.json "data.json", (err, data) ->
   d3.select("button#stage2").on "click", -> update("stage2", 1)
   d3.select("button#stage3").on "click", -> update("stage3", 2)
   d3.select("button#stage4").on "click", -> update("stage4", 3)
+
+# --- Data Formating --- #
 
 init_power_data = (data) ->
   ec_voter = data.election_comittee.voter
@@ -320,7 +412,7 @@ init_pop_data = (data) ->
 
   pop_data = {
     id: "all"
-    name: "Registered Voter"
+    name: "Registered Voters"
     value: data.registered_voter
     children: [
       {
@@ -355,6 +447,7 @@ init_pop_data = (data) ->
 
   pop_data
 
+# --- Misc Helpers --- #
 
 # http://stackoverflow.com/questions/2259476/rotating-a-point-about-another-point-2d
 rotate = (point, cpoint, angle) ->
@@ -415,3 +508,66 @@ get_translate = (el) ->
   y: transform.translate[1]
 
 random = (min, max) -> Math.random() * (max - min) + min
+
+# http://stackoverflow.com/questions/12034019/as3-draw-a-line-along-the-common-tangents-of-two-circles
+# get_common_tangent = (point1, point2, radius1, radius2) ->
+#   theta = Math.atan2(point2.y - point1.y, point2.x - point1.x)
+
+#   line1_start = [
+#     point1.x + Math.cos(theta + Math.PI / 2) * radius1
+#     point1.y + Math.sin(theta + Math.PI / 2) * radius1
+#   ]
+
+#   line1_end = [
+#     point2.x + Math.cos(theta + Math.PI / 2) * radius2
+#     point2.y + Math.sin(theta + Math.PI / 2) * radius2
+#   ]
+
+#   line2_start = [
+#     point1.x + Math.cos(theta - Math.PI / 2) * radius1
+#     point1.y + Math.sin(theta - Math.PI / 2) * radius1
+#   ]
+
+#   line2_end = [
+#     point2.x + Math.cos(theta - Math.PI / 2) * radius2
+#     point2.y + Math.sin(theta - Math.PI / 2) * radius2
+#   ]
+
+#   [
+#     [line1_start, line1_end]
+#     [line2_start, line2_end]
+#   ]
+
+get_common_tangent = (p1, p2, r1, r2) ->
+  dx = p2.x - p1.x
+  dy = p2.y - p1.y
+  dist = Math.sqrt(dx*dx + dy*dy)
+
+  angle1 = Math.atan2(dy, dx)
+  angle2 = Math.acos((r1 - r2)/dist)
+
+  line1_start = [
+    p1.x + r1 * Math.cos(angle1 + angle2)
+    p1.y + r1 * Math.sin(angle1 + angle2)
+  ]
+
+  line1_end = [
+    p2.x + r2 * Math.cos(angle1 + angle2)
+    p2.y + r2 * Math.sin(angle1 + angle2)
+  ]
+
+  line2_start = [
+    p1.x + r1 * Math.cos(angle1 - angle2)
+    p1.y + r1 * Math.sin(angle1 - angle2)
+  ]
+
+  line2_end = [
+    p2.x + r2 * Math.cos(angle1 - angle2)
+    p2.y + r2 * Math.sin(angle1 - angle2)
+  ]
+
+  [
+    [line1_start, line1_end]
+    [line2_start, line2_end]
+  ]
+

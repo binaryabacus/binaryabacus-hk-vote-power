@@ -4,10 +4,7 @@
 
 ## todo
 
-- improve animation
-  - collapsible http://bl.ocks.org/mbostock/1062288
-- implement label
-
+- prevent abrupt animation from stage3 to stage4
 
 ## example
 
@@ -15,7 +12,6 @@
 - http://i.imgur.com/QQ5YFTN.jpg
 - http://blogs.wsj.com/chinarealtime/2012/03/19/meet-hong-kong%E2%80%99s-voters-all-1200-of-them/
 - http://s.wsj.net/public/resources/images/OB-SG717_0319HK_G_20120319100321.jpg
-
 
 ## d3
 - circle packing: http://bl.ocks.org/mbostock/4063530

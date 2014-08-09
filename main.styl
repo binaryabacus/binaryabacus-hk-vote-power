@@ -1,5 +1,6 @@
 circle-fill = #f4f4f4
 circle-stroke = #dddbdb
+circle-stroke-active = #1D77DF
 
 body
   font-family "tablet-gothic", sans-serif
@@ -59,22 +60,33 @@ p.description
   margin 0
   line-height 1.1em
 
-// .pack
-//   opacity 0
-
-// .label.pack
-//   opacity 0
-//   transition opacity 0.5s ease
-
-.pack.node
-  // opacity 0
-  transition opacity 0.5s ease
-
 .label-link
   stroke-width 1px
   stroke #dadada
 
-// .stage1
-//   .pack.label, .pack.node
-//     &.all
-//       opacity 1
+.node
+  transition opacity 0.5s ease
+
+.pack.node
+  circle
+    transition fill 0.5s ease
+
+  &.no-fill circle
+    fill rgba(0,0,0,0)
+
+svg.highlighted
+  .node
+    opacity 0.4
+
+    &.active
+      opacity 1
+      stroke circle-stroke-active
+
+      circle
+        stroke circle-stroke-active
+
+  line.active-link
+    stroke circle-stroke-active
+
+.label-link, .pack.no-fill
+  pointer-events none
