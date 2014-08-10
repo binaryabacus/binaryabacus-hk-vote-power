@@ -3,6 +3,7 @@
   <head>
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/normalize/3.0.1/normalize.css" />
     <link rel="stylesheet" href="main.css" />
+
     <script type="text/javascript" src="//use.typekit.net/dou7uno.js"></script>
     <script type="text/javascript">try{Typekit.load();}catch(e){}</script>
   </head>
@@ -10,13 +11,34 @@
 
     <div class="container">
       <svg></svg>
-      <div id="control">
+
+      <div class="annotation-container">
+        <p class="power">Relative Voting Power</p>
+        <p class="pop">Population</p>
+
+        <p class="caption"></p>
+      </div>
+
+      <div class="label-container"></div>
+
+      <!-- <div id="control-debug">
         <button id="stage1">stage 1</button>
         <button id="stage2">stage 2</button>
         <button id="stage3">stage 3</button>
         <button id="stage4">stage 4</button>
         <button id="prev">prev</button>
         <button id="next">next</button>
+      </div> -->
+
+      <div class="control">
+        <p class="prev"><a href="#">Previous</a></p>
+        <ul class="pagination">
+          <li id="stage1"></li>
+          <li id="stage2"></li>
+          <li id="stage3"></li>
+          <li id="stage4"></li>
+        </ul>
+        <p class="next"><a href="#">Next</a></p>
       </div>
     </div>
 

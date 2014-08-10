@@ -13,10 +13,10 @@ svg
   width 100%
   height 100%
 
-#control
+#control-debug
+  position absolute
   top 0
   left 0
-  position absolute
 
 circle
   fill circle-fill
@@ -100,5 +100,77 @@ body.highlighted
     &.active
       opacity 1
 
-.label-link, .pack.no-fill
+.annotation-container
+  position absolute
+  top 0
+  left 0
+  font-size 12px
+
+  p
+    position absolute
+    text-align center
+    margin 0
+
+.control
+  position absolute
+  top 0
+  left 0
+  font-size 11px
+  text-align center
+
+  & > *
+    display inline-block
+
+  a
+    color #1D77DF
+    text-decoration none
+
+  .disabled a
+    color #C5C5C5
+
+  .prev
+    margin-right 10px
+    
+    &:before
+      display inline-block
+      position relative
+      top 2px
+      width 16px
+      height 16px
+      content ""
+      background url(arrow-prev.png)
+
+  .next
+    margin-left 10px
+    &:after
+      display inline-block
+      position relative
+      top 4px
+      width 16px
+      height 16px
+      content ""
+      background url(arrow-next.png)
+
+  ul
+    margin 0
+    padding 0
+    list-style none
+
+    li
+      position relative
+      top -1px
+      display inline-block
+      margin 0 5px
+      border-radius 10px
+      height 4px
+      width 4px
+      background #666666
+      &.active
+        top 3px
+        width 10px
+        height 10px
+        background #F3F3F3
+        border 1px solid #1D77DF
+
+.label-link, .pack.no-fill, .annotation-container
   pointer-events none

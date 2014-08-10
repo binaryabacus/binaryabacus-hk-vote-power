@@ -9,10 +9,10 @@ svg {
   width: 100%;
   height: 100%;
 }
-#control {
+#control-debug {
+  position: absolute;
   top: 0;
   left: 0;
-  position: absolute;
 }
 circle {
   fill: #f4f4f4;
@@ -94,8 +94,83 @@ body.highlighted .label:not(.hidden) {
 body.highlighted .label:not(.hidden).active {
   opacity: 1;
 }
+.annotation-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 12px;
+}
+.annotation-container p {
+  position: absolute;
+  text-align: center;
+  margin: 0;
+}
+.control {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 11px;
+  text-align: center;
+}
+.control > * {
+  display: inline-block;
+}
+.control a {
+  color: #1d77df;
+  text-decoration: none;
+}
+.control .disabled a {
+  color: #c5c5c5;
+}
+.control .prev {
+  margin-right: 10px;
+}
+.control .prev:before {
+  display: inline-block;
+  position: relative;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  content: "";
+  background: url("arrow-prev.png");
+}
+.control .next {
+  margin-left: 10px;
+}
+.control .next:after {
+  display: inline-block;
+  position: relative;
+  top: 4px;
+  width: 16px;
+  height: 16px;
+  content: "";
+  background: url("arrow-next.png");
+}
+.control ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.control ul li {
+  position: relative;
+  top: -1px;
+  display: inline-block;
+  margin: 0 5px;
+  border-radius: 10px;
+  height: 4px;
+  width: 4px;
+  background: #666;
+}
+.control ul li.active {
+  top: 3px;
+  width: 10px;
+  height: 10px;
+  background: #f3f3f3;
+  border: 1px solid #1d77df;
+}
 .label-link,
-.pack.no-fill {
+.pack.no-fill,
+.annotation-container {
   pointer-events: none;
 }
 

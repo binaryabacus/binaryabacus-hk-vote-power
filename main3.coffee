@@ -12,10 +12,12 @@ layout_spacing = window.innerWidth * 0.05
 pack_width = 300
 pack_height = 300
 
+annotation_height = 100
+
 force_g_offsetX = window.innerWidth / 2 - force_width - layout_spacing
-force_g_offsetY = window.innerHeight / 2 - force_height / 2
+force_g_offsetY = window.innerHeight / 2 - force_height / 2 - annotation_height
 pack_g_offsetX = window.innerWidth / 2 + layout_spacing
-pack_g_offsetY = window.innerHeight / 2 - pack_height / 2
+pack_g_offsetY = window.innerHeight / 2 - pack_height / 2 - annotation_height
 
 pop_format = d3.format(".3s")
 power_format = d3.format(".0f")
@@ -31,12 +33,33 @@ force_g = svg.append("g")
   .attr "transform", "translate(#{ force_g_offsetX }, #{ force_g_offsetY })"
 pack_g = svg.append("g")
   .attr "transform", "translate(#{ pack_g_offsetX }, #{ pack_g_offsetY })"
-label_container = d3.select(".container")
-  .append("div").attr("class", "label-container")
+label_container = d3.select(".label-container")
+annotation_container = d3.select(".annotation-container")
+
+annotation_container.select(".power")
+  .style "left", force_g_offsetX
+  .style "width", force_width
+  .style "top", force_g_offsetY + force_height + 50
+
+annotation_container.select(".pop")
+  .style "left", pack_g_offsetX
+  .style "width", pack_width
+  .style "top", pack_g_offsetY + pack_height + 50
+
+control_container = d3.select(".control")
+control_container
+  .style "left", force_g_offsetX
+  .style "width", force_width + layout_spacing * 2 + pack_width
+  .style "top", pack_g_offsetY + pack_height + 200
 
 d3.json "data.json", (err, data) ->
   power_data = init_power_data data
   pop_data = init_pop_data data
+
+  cur_stage = ""
+  cur_depth = 0
+  first_run = true
+  transitioning = false
 
   log power_data
   log pop_data
@@ -101,6 +124,7 @@ d3.json "data.json", (err, data) ->
     .on "tick", (e) ->
       force_nodes
         .each collide(e.alpha, force_data)
+        .each bound(e.alpha, force_height, force_width)
         .attr "transform", (d) -> "translate(#{d.x}, #{d.y})"
       get_label_transform = (d) ->
         # offset label so that they are centered
@@ -199,17 +223,6 @@ d3.json "data.json", (err, data) ->
   # -- Pack Layout Update -- #
 
   update_pack_node = (depth) ->
-    # pack_nodes.select("circle")
-    #   .filter (d) -> d.depth isnt depth
-    #   .transition()
-    #     .style "fill", "none"
-
-    # pack_nodes.select("circle")
-    #   .filter (d) -> d.depth is depth
-    #   .style "fill", ""
-    #   .transition()
-    #     .style "opacity", 1
-
     pack_nodes
       .filter (d) -> d.depth is depth
       .classed "no-fill", false
@@ -336,12 +349,35 @@ d3.json "data.json", (err, data) ->
       .on "mouseout", force_node_mouseouted
       .on "touchend", force_node_mouseouted
 
-  # -- Main Update -- #
+  # -- Caption Update -- #
 
-  cur_stage = ""
-  cur_depth = 0
-  first_run = true
-  transitioning = false
+  get_caption_text = (depth) ->
+    if cur_stage is "stage1"
+      "If you are #{""} under universal suffarage, you have the same voting power than anyone else"
+    else
+      "If you are #{""}, you have at least #{""} voting power than in universal sufferage"
+
+  # -- Control Update -- #
+
+  prev_link = control_container.select(".prev")
+  next_link = control_container.select(".next")
+  pagination_li = control_container.selectAll(".pagination li")
+
+  update_control = (depth) ->
+    prev_link.classed "disabled", false
+    next_link.classed "disabled", false
+    if depth is 0
+      prev_link.classed "disabled", true
+    else if depth is 3
+      next_link.classed "disabled", true
+
+    pagination_li
+      .classed "active", false
+      .filter (d, i) -> i is depth
+      .classed "active", true
+
+
+  # -- Stage Update -- #
 
   update = (stage, depth) ->
     return if stage is cur_stage
@@ -364,6 +400,7 @@ d3.json "data.json", (err, data) ->
     update_force_node()
     update_pack_node(depth)
     update_mouse_binding(depth)
+    update_control(depth)
 
     cur_stage = stage
     cur_depth = depth
@@ -376,8 +413,6 @@ d3.json "data.json", (err, data) ->
       transitioning = false
     , 1250
 
-  update "stage1", 0
-
   next = () ->
     return if cur_depth >= 3
     update "stage#{cur_depth + 2}", cur_depth + 1
@@ -386,6 +421,10 @@ d3.json "data.json", (err, data) ->
     return if cur_depth <= 0
     update "stage#{cur_depth}", cur_depth - 1
 
+  # -- Event binding --
+
+  update "stage1", 0
+
   d3.select("button#stage1").on "click", -> update("stage1", 0)
   d3.select("button#stage2").on "click", -> update("stage2", 1)
   d3.select("button#stage3").on "click", -> update("stage3", 2)
@@ -393,6 +432,9 @@ d3.json "data.json", (err, data) ->
 
   d3.select("button#next").on "click", next
   d3.select("button#prev").on "click", prev
+
+  d3.select(".control .next").on "click", next
+  d3.select(".control .prev").on "click", prev
 
 # --- Data Formating --- #
 
@@ -539,6 +581,16 @@ collide = (alpha, force_data) ->
           quad.point.x += x
           quad.point.y += y
       x1 > nx2 or x2 < nx1 or y1 > ny2 or y2 < ny1
+
+bound = (alpha, max_y, max_x) ->
+  alpha = alpha * 1
+  (d) ->
+    if d.y + d.r >= max_y
+      l = (d.y + d.r - max_y) * alpha
+      d.y -= l;
+    if d.x + d.r >= max_x
+      l = (d.x + d.r - max_x) * alpha
+      d.x -= l;
 
 find_centroid = (pts) ->
   pts = pts.map (pt) -> [pt.x, pt.y]
