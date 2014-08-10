@@ -100,10 +100,26 @@ body.highlighted .label:not(.hidden).active {
   left: 0;
   font-size: 12px;
 }
+.annotation-container .scenario {
+  position: absolute;
+  text-align: center;
+}
+.annotation-container .layout-title {
+  font-weight: bold;
+}
+.annotation-container .instruction {
+  font-style: italic;
+}
 .annotation-container p {
   position: absolute;
   text-align: center;
   margin: 0;
+}
+.annotation-container .caption .group {
+  color: #1d77df;
+}
+.annotation-container .caption .power {
+  font-weight: bold;
 }
 .control {
   position: absolute;

@@ -1,6 +1,6 @@
 circle-fill = #f4f4f4
 circle-stroke = #dddbdb
-circle-stroke-active = #1D77DF
+blue-active-highlight = #1D77DF
 
 body
   font-family "tablet-gothic", sans-serif
@@ -86,13 +86,13 @@ body.highlighted
 
     &.active
       opacity 1
-      stroke circle-stroke-active
+      stroke blue-active-highlight
 
       circle
-        stroke circle-stroke-active
+        stroke blue-active-highlight
 
   line.active-link
-    stroke circle-stroke-active
+    stroke blue-active-highlight
 
   .label:not(.hidden)
     opacity 0.4
@@ -106,10 +106,26 @@ body.highlighted
   left 0
   font-size 12px
 
+  .scenario
+    position absolute
+    text-align center
+
+  .layout-title
+    font-weight bold
+
+  .instruction
+    font-style italic
+
   p
     position absolute
     text-align center
     margin 0
+
+  .caption
+    .group
+      color blue-active-highlight
+    .power
+      font-weight bold
 
 .control
   position absolute
@@ -122,7 +138,7 @@ body.highlighted
     display inline-block
 
   a
-    color #1D77DF
+    color blue-active-highlight
     text-decoration none
 
   .disabled a

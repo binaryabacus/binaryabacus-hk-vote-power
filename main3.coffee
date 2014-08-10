@@ -2,7 +2,7 @@ debug = true
 log = if debug then console.log.bind(console) else () ->
 
 min_size = 1
-max_size = 300
+max_size = 150
 
 # TODO: use margin for positioning (http://bl.ocks.org/mbostock/3087986)
 
@@ -13,18 +13,21 @@ pack_width = 300
 pack_height = 300
 
 annotation_height = 100
+caption_width = 350
 
 force_g_offsetX = window.innerWidth / 2 - force_width - layout_spacing
 force_g_offsetY = window.innerHeight / 2 - force_height / 2 - annotation_height
 pack_g_offsetX = window.innerWidth / 2 + layout_spacing
 pack_g_offsetY = window.innerHeight / 2 - pack_height / 2 - annotation_height
 
+vis_width = force_width + layout_spacing * 2 + pack_width
+
 pop_format = d3.format(".3s")
 power_format = d3.format(".0f")
 
 power_scale = d3.scale.pow().exponent(0.25)
   .domain([0, 3000])
-  .range([min_size, max_size / 3])
+  .range([min_size, max_size / 2])
 
 body= d3.select("body")
 svg = d3.select("svg")
@@ -39,18 +42,30 @@ annotation_container = d3.select(".annotation-container")
 annotation_container.select(".power")
   .style "left", force_g_offsetX
   .style "width", force_width
-  .style "top", force_g_offsetY + force_height + 50
+  .style "top", force_g_offsetY + force_height + 30
 
 annotation_container.select(".pop")
   .style "left", pack_g_offsetX
   .style "width", pack_width
-  .style "top", pack_g_offsetY + pack_height + 50
+  .style "top", pack_g_offsetY + pack_height + 30
+
+caption_offset = (vis_width - caption_width) / 2
+caption = annotation_container.select(".caption")
+  .style "left", force_g_offsetX + caption_offset
+  # .style "width", force_width + layout_spacing * 2 + pack_width
+  .style "width", caption_width
+  .style "top", pack_g_offsetY + pack_height + 70
+
+scenario = annotation_container.select(".scenario")
+  .style "left", force_g_offsetX
+  .style "width", vis_width
+  .style "top", force_g_offsetY + force_height + 150
 
 control_container = d3.select(".control")
 control_container
   .style "left", force_g_offsetX
   .style "width", force_width + layout_spacing * 2 + pack_width
-  .style "top", pack_g_offsetY + pack_height + 200
+  .style "top", pack_g_offsetY + pack_height + 130
 
 d3.json "data.json", (err, data) ->
   power_data = init_power_data data
@@ -76,7 +91,7 @@ d3.json "data.json", (err, data) ->
   pack_nodes = pack_g.selectAll(".pack.node").data(pack_data)
     .enter().append("g")
       .attr "transform", (d) ->
-        cpoint = x: max_size / 2, y: max_size / 2
+        cpoint = x: pack_width / 2, y: pack_height / 2
         pt = rotate d, cpoint, -Math.PI / 2
         d.pack_x = pt.x
         d.pack_y = pt.y
@@ -314,10 +329,12 @@ d3.json "data.json", (err, data) ->
         if active_pack_node?.size() and active_force_node?.size()
           show_link()
           update_active_links()
+          update_caption()
 
     pack_node_mouseouted = () ->
         hide_link()
         active_force_node = active_pack_node = active_force_label = active_pack_label = null
+        update_caption()
 
     force_node_mousemoved = () ->
         d3.event.preventDefault()
@@ -330,10 +347,12 @@ d3.json "data.json", (err, data) ->
         if active_pack_node?.size() and active_force_node?.size()
           show_link()
           update_active_links()
+          update_caption()
 
     force_node_mouseouted = () ->
         hide_link()
         active_force_node = active_pack_node = active_force_label = active_pack_label = null
+        update_caption()
 
     pack_nodes
       .on "touchstart", pack_node_mousemoved
@@ -351,11 +370,45 @@ d3.json "data.json", (err, data) ->
 
   # -- Caption Update -- #
 
-  get_caption_text = (depth) ->
-    if cur_stage is "stage1"
-      "If you are #{""} under universal suffarage, you have the same voting power than anyone else"
+  update_caption = () ->
+    if !active_force_node?.size() or !active_pack_node?.size()
+      caption.html "
+        <span class='instruction'>(View details by selecting a circle)</span>
+        <br />
+        <span class='instruction'>(Click Next or Previous to continue)</span>
+      "
+      return
+
+    name = active_force_node.datum().full_name
+    vote_power_value = active_force_node.datum().value
+
+    if vote_power_value is 0
+      vote_power_text = "<span class='power'>no</span>"
     else
-      "If you are #{""}, you have at least #{""} voting power than in universal sufferage"
+      vote_power_text = "at least <span class='power'>#{power_format vote_power_value}</span> times more"
+
+    if vote_power_text is "no"
+      vote_power_compare = ""
+    else
+      vote_power_compare = "than in universal sufferage"
+
+
+    if cur_stage is "stage1"
+      caption_text = "If you are <span class='name'>#{name}</span> under universal suffrage, 
+        you have the <span class='power'>same</span> voting power as anyone else"
+    else
+      caption_text = "If you are <span class='name'>#{name}</span>,
+        you have #{vote_power_text} voting power #{vote_power_compare}"
+
+    caption.html caption_text
+
+  update_scenario_text = (depth) ->
+    if depth is 0
+      scanario_text = "Under Universal Suffrage"
+    else
+      scanario_text = "Under the 2012 Chief Executive Election System"
+
+    scenario.html scanario_text
 
   # -- Control Update -- #
 
@@ -401,6 +454,7 @@ d3.json "data.json", (err, data) ->
     update_pack_node(depth)
     update_mouse_binding(depth)
     update_control(depth)
+    update_scenario_text(depth)
 
     cur_stage = stage
     cur_depth = depth
@@ -424,6 +478,7 @@ d3.json "data.json", (err, data) ->
   # -- Event binding --
 
   update "stage1", 0
+  update_caption()
 
   d3.select("button#stage1").on "click", -> update("stage1", 0)
   d3.select("button#stage2").on "click", -> update("stage2", 1)
@@ -447,28 +502,33 @@ init_power_data = (data) ->
     stage1: [
       id: "all"
       name: "Registered Voters"
+      full_name: "a <span class='group'>registered voter</span>"
       value: 1
     ]
 
     stage2: [
       id: "all"
       name: "Others"
+      full_name: "<span class='group'>anyone else</span>"
       value: 0
     ,
       id: "ec-voters"
       name: "Voters for Election Comittee"
+      full_name: "an eligible <span class='group'>Election Comittee voter</span>"
       value: data.registered_voter / ec_voter
     ]
 
     stage3: [
       id: "all"
-      name: "Others"
+      name: "Others",
+      full_name: "anyone else"
       value: 0
     ]
 
     stage4: [
       id: "all"
-      name: "Others"
+      name: "Others",
+      full_name: "anyone else"
       value: 0
     ]
 
@@ -476,6 +536,7 @@ init_power_data = (data) ->
     power_data.stage3.push(
       id: sector.id
       name: sector.name
+      full_name: "an eligible Election Comittee voter from the <span class='group'>#{sector.name}</span> sector"
       value: (ec_voter / sectors_length) / sector.count * ec_voter_power
       exit: ["ec-voters"]
       enter: ["ec-voters"]
@@ -483,6 +544,7 @@ init_power_data = (data) ->
     power_data.stage4.push(
       id: sector.id
       name: "Voted-in Election Comittee Members from #{sector.name}"
+      full_name: "a voted-in Election Comittee member from the <span class='group'>#{sector.name}</span> sector"
       value: data.registered_voter / (data.election_comittee.seats_per_sector * sectors_length)
     )
 
