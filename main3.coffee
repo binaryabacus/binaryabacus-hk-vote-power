@@ -210,10 +210,9 @@ d3.json "data.json", (err, data) ->
       .classed "no-fill", true
 
     pop_labels
-      .style "opacity", 0
+      .classed "hidden", true
       .filter (d) -> d.depth is depth or (depth >= 2 and d.id is "others")
-      .transition().duration(1000)
-        .style "opacity", 1
+      .classed "hidden", false
 
     pop_label_links
       .style "opacity", 0
@@ -231,22 +230,27 @@ d3.json "data.json", (err, data) ->
   # -- Mouse Selection -- #
 
   show_link = (pack_node, force_node) ->
-    svg.classed "highlighted", true
+    body.classed "highlighted", true
     return if !active_force_node?.size() or !active_pack_node?.size()
 
-    # TODO set active to labels too
     active_pack_node.classed "active", true
     active_force_node.classed "active", true
+    active_force_label.classed "active", true
+    active_pack_label.classed "active", true
 
   hide_link = () ->
-    svg.classed "highlighted", false
+    body.classed "highlighted", false
     return if !active_force_node?.size() or !active_pack_node?.size()
 
     active_pack_node.classed "active", false
     active_force_node.classed "active", false
+    active_force_label.classed "active", false
+    active_pack_label.classed "active", false
 
   active_pack_node = null
   active_force_node = null
+  active_force_label = null
+  active_pack_label = null
 
   update_active_links = () ->
     return if !active_force_node?.size() or !active_pack_node?.size()
@@ -274,7 +278,6 @@ d3.json "data.json", (err, data) ->
     active_links.exit()
       .remove()
 
-
   force.on "tick.update-active-link", update_active_links
 
   update_mouse_binding = (depth) ->
@@ -283,33 +286,41 @@ d3.json "data.json", (err, data) ->
         active_pack_node = d3.select this
         pack_node_name = active_pack_node.datum().name
         active_force_node = force_nodes.filter (d) -> d.name is pack_node_name
+        active_force_label = force_labels.filter (d) -> d.name is pack_node_name
+        active_pack_label = pop_labels.filter (d) -> d.name is pack_node_name
+
         if active_pack_node?.size() and active_force_node?.size()
           show_link()
           update_active_links()
       .on "mouseout", () ->
         hide_link()
-        active_force_node = active_pack_node = null
+        active_force_node = active_pack_node = active_force_label = active_pack_label = null
 
     force_nodes
       .on "mousemove", () ->
         active_force_node = d3.select(this)
         force_node_name = active_force_node.datum().name
         active_pack_node = pack_nodes.filter (d) -> d.name is force_node_name
+        active_force_label = force_labels.filter (d) -> d.name is force_node_name
+        active_pack_label = pop_labels.filter (d) -> d.name is force_node_name
+
         if active_pack_node?.size() and active_force_node?.size()
           show_link()
           update_active_links()
       .on "mouseout", () ->
         hide_link()
-        active_force_node = active_pack_node = null
+        active_force_node = active_pack_node = active_force_label = active_pack_label = null
 
   # -- Main Update -- #
 
   cur_stage = ""
   cur_depth = 0
   first_run = true
+  transitioning = false
 
   update = (stage, depth) ->
     return if stage is cur_stage
+    return if transitioning
 
     force_data = power_data[stage]
     last_force_data = power_data[cur_stage] or []
@@ -321,7 +332,9 @@ d3.json "data.json", (err, data) ->
         match_nodes = last_force_data.filter (e) -> d.id is e.id
         match_nodes.forEach (e) ->
           d.x = e.x
+          d.px = e.px
           d.y = e.y
+          d.py = e.py
 
     update_force_node()
     update_pack_node(depth)
@@ -332,13 +345,29 @@ d3.json "data.json", (err, data) ->
     log cur_stage, cur_depth
 
     first_run = false
+    transitioning = true
+
+    setTimeout () ->
+      transitioning = false
+    , 1250
 
   update "stage1", 0
+
+  next = () ->
+    return if cur_depth >= 3
+    update "stage#{cur_depth + 2}", cur_depth + 1
+
+  prev = () ->
+    return if cur_depth <= 0
+    update "stage#{cur_depth}", cur_depth - 1
 
   d3.select("button#stage1").on "click", -> update("stage1", 0)
   d3.select("button#stage2").on "click", -> update("stage2", 1)
   d3.select("button#stage3").on "click", -> update("stage3", 2)
   d3.select("button#stage4").on "click", -> update("stage4", 3)
+
+  d3.select("button#next").on "click", next
+  d3.select("button#prev").on "click", prev
 
 # --- Data Formating --- #
 
@@ -510,34 +539,6 @@ get_translate = (el) ->
 random = (min, max) -> Math.random() * (max - min) + min
 
 # http://stackoverflow.com/questions/12034019/as3-draw-a-line-along-the-common-tangents-of-two-circles
-# get_common_tangent = (point1, point2, radius1, radius2) ->
-#   theta = Math.atan2(point2.y - point1.y, point2.x - point1.x)
-
-#   line1_start = [
-#     point1.x + Math.cos(theta + Math.PI / 2) * radius1
-#     point1.y + Math.sin(theta + Math.PI / 2) * radius1
-#   ]
-
-#   line1_end = [
-#     point2.x + Math.cos(theta + Math.PI / 2) * radius2
-#     point2.y + Math.sin(theta + Math.PI / 2) * radius2
-#   ]
-
-#   line2_start = [
-#     point1.x + Math.cos(theta - Math.PI / 2) * radius1
-#     point1.y + Math.sin(theta - Math.PI / 2) * radius1
-#   ]
-
-#   line2_end = [
-#     point2.x + Math.cos(theta - Math.PI / 2) * radius2
-#     point2.y + Math.sin(theta - Math.PI / 2) * radius2
-#   ]
-
-#   [
-#     [line1_start, line1_end]
-#     [line2_start, line2_end]
-#   ]
-
 get_common_tangent = (p1, p2, r1, r2) ->
   dx = p2.x - p1.x
   dy = p2.y - p1.y

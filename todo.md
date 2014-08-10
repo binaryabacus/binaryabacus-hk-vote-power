@@ -4,7 +4,6 @@
 
 ## todo
 
-- prevent abrupt animation from stage3 to stage4
 
 ## example
 

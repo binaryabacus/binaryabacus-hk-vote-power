@@ -43,6 +43,7 @@ p.description
   height 100%
 
 .label
+  transition opacity .5s ease
   color #868686
   position absolute
   top 0
@@ -52,6 +53,9 @@ p.description
 
   &.power
     font-size 11px
+
+  &.hidden
+    opacity 0
 
 .label p
   display table-cell
@@ -74,7 +78,7 @@ p.description
   &.no-fill circle
     fill rgba(0,0,0,0)
 
-svg.highlighted
+body.highlighted
   .node
     opacity 0.4
 
@@ -87,6 +91,12 @@ svg.highlighted
 
   line.active-link
     stroke circle-stroke-active
+
+  .label:not(.hidden)
+    opacity 0.4
+
+    &.active
+      opacity 1
 
 .label-link, .pack.no-fill
   pointer-events none

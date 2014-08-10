@@ -39,6 +39,7 @@ p.description {
   height: 100%;
 }
 .label {
+  transition: opacity 0.5s ease;
   color: #868686;
   position: absolute;
   top: 0;
@@ -48,6 +49,9 @@ p.description {
 }
 .label.power {
   font-size: 11px;
+}
+.label.hidden {
+  opacity: 0;
 }
 .label p {
   display: table-cell;
@@ -69,18 +73,24 @@ p.description {
 .pack.node.no-fill circle {
   fill: rgba(0,0,0,0);
 }
-svg.highlighted .node {
+body.highlighted .node {
   opacity: 0.4;
 }
-svg.highlighted .node.active {
+body.highlighted .node.active {
   opacity: 1;
   stroke: #1d77df;
 }
-svg.highlighted .node.active circle {
+body.highlighted .node.active circle {
   stroke: #1d77df;
 }
-svg.highlighted line.active-link {
+body.highlighted line.active-link {
   stroke: #1d77df;
+}
+body.highlighted .label:not(.hidden) {
+  opacity: 0.4;
+}
+body.highlighted .label:not(.hidden).active {
+  opacity: 1;
 }
 .label-link,
 .pack.no-fill {

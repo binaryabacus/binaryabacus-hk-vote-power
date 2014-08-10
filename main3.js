@@ -35,7 +35,7 @@
   label_container = d3.select(".container").append("div").attr("class", "label-container");
 
   d3.json("data.json", function(err, data) {
-    var active_force_node, active_pack_node, cur_depth, cur_stage, first_run, force, force_data, force_labels, force_nodes, hide_link, last_force_data, pack, pack_data, pack_nodes, pop_data, pop_label_links, pop_label_links_data, pop_labels, power_data, show_link, update, update_active_links, update_force_node, update_mouse_binding, update_pack_node;
+    var active_force_label, active_force_node, active_pack_label, active_pack_node, cur_depth, cur_stage, first_run, force, force_data, force_labels, force_nodes, hide_link, last_force_data, next, pack, pack_data, pack_nodes, pop_data, pop_label_links, pop_label_links_data, pop_labels, power_data, prev, show_link, transitioning, update, update_active_links, update_force_node, update_mouse_binding, update_pack_node;
     power_data = init_power_data(data);
     pop_data = init_pop_data(data);
     log(power_data);
@@ -215,9 +215,9 @@
       pack_nodes.filter(function(d) {
         return d.depth !== depth;
       }).classed("no-fill", true);
-      pop_labels.style("opacity", 0).filter(function(d) {
+      pop_labels.classed("hidden", true).filter(function(d) {
         return d.depth === depth || (depth >= 2 && d.id === "others");
-      }).transition().duration(1000).style("opacity", 1);
+      }).classed("hidden", false);
       pop_label_links.style("opacity", 0).filter(function(d) {
         return d.depth === depth;
       }).transition().duration(1000).style("opacity", 1);
@@ -230,23 +230,29 @@
       });
     };
     show_link = function(pack_node, force_node) {
-      svg.classed("highlighted", true);
+      body.classed("highlighted", true);
       if (!(typeof active_force_node !== "undefined" && active_force_node !== null ? active_force_node.size() : void 0) || !(typeof active_pack_node !== "undefined" && active_pack_node !== null ? active_pack_node.size() : void 0)) {
         return;
       }
       active_pack_node.classed("active", true);
-      return active_force_node.classed("active", true);
+      active_force_node.classed("active", true);
+      active_force_label.classed("active", true);
+      return active_pack_label.classed("active", true);
     };
     hide_link = function() {
-      svg.classed("highlighted", false);
+      body.classed("highlighted", false);
       if (!(typeof active_force_node !== "undefined" && active_force_node !== null ? active_force_node.size() : void 0) || !(typeof active_pack_node !== "undefined" && active_pack_node !== null ? active_pack_node.size() : void 0)) {
         return;
       }
       active_pack_node.classed("active", false);
-      return active_force_node.classed("active", false);
+      active_force_node.classed("active", false);
+      active_force_label.classed("active", false);
+      return active_pack_label.classed("active", false);
     };
     active_pack_node = null;
     active_force_node = null;
+    active_force_label = null;
+    active_pack_label = null;
     update_active_links = function() {
       var active_links, point1, point2, radius1, radius2, tangents;
       if (!(active_force_node != null ? active_force_node.size() : void 0) || !(active_pack_node != null ? active_pack_node.size() : void 0)) {
@@ -292,13 +298,19 @@
         active_force_node = force_nodes.filter(function(d) {
           return d.name === pack_node_name;
         });
+        active_force_label = force_labels.filter(function(d) {
+          return d.name === pack_node_name;
+        });
+        active_pack_label = pop_labels.filter(function(d) {
+          return d.name === pack_node_name;
+        });
         if ((active_pack_node != null ? active_pack_node.size() : void 0) && (active_force_node != null ? active_force_node.size() : void 0)) {
           show_link();
           return update_active_links();
         }
       }).on("mouseout", function() {
         hide_link();
-        return active_force_node = active_pack_node = null;
+        return active_force_node = active_pack_node = active_force_label = active_pack_label = null;
       });
       return force_nodes.on("mousemove", function() {
         var force_node_name;
@@ -307,20 +319,30 @@
         active_pack_node = pack_nodes.filter(function(d) {
           return d.name === force_node_name;
         });
+        active_force_label = force_labels.filter(function(d) {
+          return d.name === force_node_name;
+        });
+        active_pack_label = pop_labels.filter(function(d) {
+          return d.name === force_node_name;
+        });
         if ((active_pack_node != null ? active_pack_node.size() : void 0) && (active_force_node != null ? active_force_node.size() : void 0)) {
           show_link();
           return update_active_links();
         }
       }).on("mouseout", function() {
         hide_link();
-        return active_force_node = active_pack_node = null;
+        return active_force_node = active_pack_node = active_force_label = active_pack_label = null;
       });
     };
     cur_stage = "";
     cur_depth = 0;
     first_run = true;
+    transitioning = false;
     update = function(stage, depth) {
       if (stage === cur_stage) {
+        return;
+      }
+      if (transitioning) {
         return;
       }
       force_data = power_data[stage];
@@ -333,7 +355,9 @@
           });
           return match_nodes.forEach(function(e) {
             d.x = e.x;
-            return d.y = e.y;
+            d.px = e.px;
+            d.y = e.y;
+            return d.py = e.py;
           });
         });
       }
@@ -343,9 +367,25 @@
       cur_stage = stage;
       cur_depth = depth;
       log(cur_stage, cur_depth);
-      return first_run = false;
+      first_run = false;
+      transitioning = true;
+      return setTimeout(function() {
+        return transitioning = false;
+      }, 1250);
     };
     update("stage1", 0);
+    next = function() {
+      if (cur_depth >= 3) {
+        return;
+      }
+      return update("stage" + (cur_depth + 2), cur_depth + 1);
+    };
+    prev = function() {
+      if (cur_depth <= 0) {
+        return;
+      }
+      return update("stage" + cur_depth, cur_depth - 1);
+    };
     d3.select("button#stage1").on("click", function() {
       return update("stage1", 0);
     });
@@ -355,9 +395,11 @@
     d3.select("button#stage3").on("click", function() {
       return update("stage3", 2);
     });
-    return d3.select("button#stage4").on("click", function() {
+    d3.select("button#stage4").on("click", function() {
       return update("stage4", 3);
     });
+    d3.select("button#next").on("click", next);
+    return d3.select("button#prev").on("click", prev);
   });
 
   init_power_data = function(data) {
