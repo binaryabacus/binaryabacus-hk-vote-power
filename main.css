@@ -2,6 +2,8 @@ body {
   font-family: "tablet-gothic", sans-serif;
   text-rendering: optimizeLegibility;
   color: #4a4a4a;
+  user-select: none;
+  -webkit-user-select: none;
 }
 svg {
   width: 100%;

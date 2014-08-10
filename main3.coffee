@@ -6,10 +6,16 @@ max_size = 300
 
 # TODO: use margin for positioning (http://bl.ocks.org/mbostock/3087986)
 
-force_g_offsetX = 100
-force_g_offsetY = 200
-pack_g_offsetX = 600
-pack_g_offsetY = 200
+force_width = 300
+force_height = 300
+layout_spacing = window.innerWidth * 0.05
+pack_width = 300
+pack_height = 300
+
+force_g_offsetX = window.innerWidth / 2 - force_width - layout_spacing
+force_g_offsetY = window.innerHeight / 2 - force_height / 2
+pack_g_offsetX = window.innerWidth / 2 + layout_spacing
+pack_g_offsetY = window.innerHeight / 2 - pack_height / 2
 
 pop_format = d3.format(".3s")
 power_format = d3.format(".0f")
@@ -22,9 +28,9 @@ body= d3.select("body")
 svg = d3.select("svg")
 
 force_g = svg.append("g")
-  .attr("transform", "translate(#{ force_g_offsetX }, #{ force_g_offsetY })")
+  .attr "transform", "translate(#{ force_g_offsetX }, #{ force_g_offsetY })"
 pack_g = svg.append("g")
-  .attr("transform", "translate(#{ pack_g_offsetX }, #{ pack_g_offsetY })")
+  .attr "transform", "translate(#{ pack_g_offsetX }, #{ pack_g_offsetY })"
 label_container = d3.select(".container")
   .append("div").attr("class", "label-container")
 
@@ -38,7 +44,7 @@ d3.json "data.json", (err, data) ->
   # -- PACK INITIALIZATION -- #
 
   pack = d3.layout.pack()
-    .size [max_size, max_size]
+    .size [pack_width, pack_height]
   pack_data = pack.nodes(pop_data)
     .filter (d) -> !d.hidden
     .reverse()
@@ -89,19 +95,22 @@ d3.json "data.json", (err, data) ->
   force_labels = label_container.selectAll(".power.label").data(force_data)
   force = d3.layout.force()
     .gravity 0.05
-    .size [300, 300]
+    .size [force_width, force_height]
     .charge 0
     .friction 0.3
     .on "tick", (e) ->
       force_nodes
         .each collide(e.alpha, force_data)
         .attr "transform", (d) -> "translate(#{d.x}, #{d.y})"
-      force_labels.style "transform", (d) ->
+      get_label_transform = (d) ->
         # offset label so that they are centered
         width_offset = if parseFloat(this.style.width) is 100 then -50 + d.r else 0
         d.force_x = d.x + force_g_offsetX - d.r + width_offset
         d.force_y = d.y + force_g_offsetY - d.r
         "translate3d(#{d.force_x}px, #{d.force_y}px, 0px)"
+      force_labels.style "transform", get_label_transform
+      force_labels.style "-webkit-transform", get_label_transform
+      force_labels.style "-moz-transform", get_label_transform
 
   # -- Force Layout Update -- #
 
@@ -281,8 +290,8 @@ d3.json "data.json", (err, data) ->
   force.on "tick.update-active-link", update_active_links
 
   update_mouse_binding = (depth) ->
-    pack_nodes
-      .on "mousemove", () ->
+    pack_node_mousemoved = () ->
+        d3.event.preventDefault()
         active_pack_node = d3.select this
         pack_node_name = active_pack_node.datum().name
         active_force_node = force_nodes.filter (d) -> d.name is pack_node_name
@@ -292,12 +301,13 @@ d3.json "data.json", (err, data) ->
         if active_pack_node?.size() and active_force_node?.size()
           show_link()
           update_active_links()
-      .on "mouseout", () ->
+
+    pack_node_mouseouted = () ->
         hide_link()
         active_force_node = active_pack_node = active_force_label = active_pack_label = null
 
-    force_nodes
-      .on "mousemove", () ->
+    force_node_mousemoved = () ->
+        d3.event.preventDefault()
         active_force_node = d3.select(this)
         force_node_name = active_force_node.datum().name
         active_pack_node = pack_nodes.filter (d) -> d.name is force_node_name
@@ -307,9 +317,24 @@ d3.json "data.json", (err, data) ->
         if active_pack_node?.size() and active_force_node?.size()
           show_link()
           update_active_links()
-      .on "mouseout", () ->
+
+    force_node_mouseouted = () ->
         hide_link()
         active_force_node = active_pack_node = active_force_label = active_pack_label = null
+
+    pack_nodes
+      .on "touchstart", pack_node_mousemoved
+      .on "mousemove", pack_node_mousemoved
+      .on "touchmove", pack_node_mousemoved
+      .on "mouseout", pack_node_mouseouted
+      .on "touchend", pack_node_mouseouted
+
+    force_nodes
+      .on "touchstart", force_node_mousemoved
+      .on "mousemove", force_node_mousemoved
+      .on "touchmove", force_node_mousemoved
+      .on "mouseout", force_node_mouseouted
+      .on "touchend", force_node_mouseouted
 
   # -- Main Update -- #
 
